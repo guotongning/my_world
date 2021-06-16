@@ -1,0 +1,2 @@
+com.ning.world.mvc.handler.DefaultRestHandler
+com.ning.world.mvc.handler.DefaultViewHandler
