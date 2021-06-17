@@ -16,6 +16,6 @@ public class HelloViewController {
 
     @RequestMapping("view")
     public String helloWorld() {
-        return "hello";
+        return "index";
     }
 }

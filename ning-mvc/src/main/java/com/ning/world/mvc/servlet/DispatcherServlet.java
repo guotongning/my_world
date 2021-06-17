@@ -114,7 +114,7 @@ public class DispatcherServlet extends HttpServlet {
                 for (MethodDescriptor methodDescriptor : methodDescriptors) {
                     Method method = methodDescriptor.getMethod();
                     Annotation[] annotations = method.getAnnotations();
-                    String mappingPath = handleMappingPath(preMapping) + handleMappingPath(getPostMapping(annotations));
+                    String mappingPath = handleMappingPath(preMapping) + handleMappingPath(getAfterMapping(annotations));
                     if (!requestMappings.add(mappingPath)) {
                         throw new RuntimeException("caveat! There are duplicate request path definitions!");
                     }
@@ -166,7 +166,7 @@ public class DispatcherServlet extends HttpServlet {
         return supportedHttpMethods;
     }
 
-    private String getPostMapping(Annotation[] annotations) {
+    private String getAfterMapping(Annotation[] annotations) {
         String postMapping = "";
         for (Annotation annotationOnMethod : annotations) {
             if (annotationOnMethod instanceof Path) {
@@ -192,6 +192,10 @@ public class DispatcherServlet extends HttpServlet {
     protected void service(HttpServletRequest request, HttpServletResponse response) {
         String requestURI = request.getRequestURI();
         HttpServletRequestHandler httpServletRequestHandler = pathHandleMapping.get(requestURI);
+        if (httpServletRequestHandler == null) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
         if (!httpServletRequestHandler.getSupportedHttpMethods().contains(request.getMethod())) {
             throw new RuntimeException("request method is not supported！");
         }

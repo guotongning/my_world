@@ -31,7 +31,8 @@ public class DefaultViewHandler implements ControllerHandler {
         try {
             Result result = invokeHandleMethod(controller, handleMethod);
             ServletContext servletContext = request.getServletContext();
-            RequestDispatcher requestDispatcher = servletContext.getRequestDispatcher(result.getMessage());
+            String resource = handleRequestMapping(result.getMessage() + ".html");
+            RequestDispatcher requestDispatcher = servletContext.getRequestDispatcher(resource);
             response.setHeader("ForwardMarker", "1");
             requestDispatcher.forward(request, response);
         } catch (Exception e) {
@@ -41,6 +42,16 @@ public class DefaultViewHandler implements ControllerHandler {
     }
 
     private Result invokeHandleMethod(Object controller, Method handleMethod) throws IllegalAccessException, InvocationTargetException {
-        return (Result) handleMethod.invoke(controller);
+        return Result.view((String) handleMethod.invoke(controller));
+    }
+
+    public static String handleRequestMapping(String requestMapping) {
+        if (requestMapping == null || "".equals(requestMapping)) {
+            return "";
+        }
+        if (!requestMapping.startsWith("/")) {
+            return "/" + requestMapping;
+        }
+        return requestMapping;
     }
 }
