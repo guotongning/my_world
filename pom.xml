@@ -8,17 +8,21 @@
     <artifactId>my_world</artifactId>
     <packaging>pom</packaging>
     <version>${world.version}</version>
-    <name>ning world definition ${world.version}</name>
+    <name>my world definition ${world.version}</name>
 
     <modules>
         <module>ning-mvc</module>
         <module>ning-world</module>
+        <module>ning-ioc</module>
     </modules>
 
     <properties>
+        <!-- 整个项目的版本 -->
+        <world.version>1.0.0</world.version>
+
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <world.version>1.0.0</world.version>
+        <!-- 第三方公共依赖 版本控制 -->
         <fastjson.version>1.2.75</fastjson.version>
         <lombok.version>1.16.18</lombok.version>
     </properties>
