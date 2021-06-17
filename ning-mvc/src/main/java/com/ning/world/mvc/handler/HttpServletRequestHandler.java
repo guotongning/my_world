@@ -2,6 +2,7 @@ package com.ning.world.mvc.handler;
 
 
 import com.ning.world.mvc.controller.Controller;
+import com.ning.world.mvc.enums.ControllerHandleType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,7 +22,8 @@ import java.util.Set;
 @AllArgsConstructor
 public class HttpServletRequestHandler {
     private String requestMapping;
-    private Class<?> controllerClazz;
+    private ControllerHandleType handleType;
+    private Object controller;
     private Method handleMethod;
     private Set<String> supportedHttpMethods;
 }

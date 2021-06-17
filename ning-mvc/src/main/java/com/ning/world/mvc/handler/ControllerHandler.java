@@ -1,11 +1,11 @@
 package com.ning.world.mvc.handler;
 
-import com.ning.world.mvc.controller.Controller;
 import com.ning.world.mvc.enums.ControllerHandleType;
 import com.ning.world.mvc.response.Result;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.Method;
 
 /**
  * 请求处理
@@ -21,6 +21,6 @@ public interface ControllerHandler {
      */
     ControllerHandleType handleType();
 
-    Result handle(HttpServletRequest request, HttpServletResponse response, Controller controller);
+    Result handle(HttpServletRequest request, HttpServletResponse response, Object controller, Method handleMethod);
 
 }

@@ -1,5 +1,6 @@
 package com.ning.world.mvc.servlet;
 
+import com.alibaba.fastjson.JSON;
 import com.ning.world.mvc.annotation.RequestMapping;
 import com.ning.world.mvc.annotation.RestController;
 import com.ning.world.mvc.annotation.ViewController;
@@ -7,6 +8,7 @@ import com.ning.world.mvc.enums.ControllerHandleType;
 import com.ning.world.mvc.handler.ClassScanner;
 import com.ning.world.mvc.handler.ControllerHandler;
 import com.ning.world.mvc.handler.HttpServletRequestHandler;
+import com.ning.world.mvc.response.Result;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -18,7 +20,6 @@ import javax.ws.rs.HttpMethod;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import java.beans.BeanInfo;
-import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.MethodDescriptor;
 import java.io.IOException;
@@ -92,33 +93,35 @@ public class DispatcherServlet extends HttpServlet {
                     ViewController viewController = clazz.getAnnotation(ViewController.class);
                     return restController != null || viewController != null;
                 })
-                .map(clazz -> {
-                    BeanInfo beanInfo;
-                    Map<String, HttpServletRequestHandler> requestHandlerMap = new LinkedHashMap<>();
-                    try {
-                        beanInfo = Introspector.getBeanInfo(clazz);
-                        Annotation[] annotationOnClass = beanInfo != null ? beanInfo.getClass().getAnnotations() : new Annotation[0];
-                        for (Annotation annotation : annotationOnClass) {
-                            String preMapping = getPreMapping(annotation);
-                            MethodDescriptor[] methodDescriptors = beanInfo.getMethodDescriptors();
-                            for (MethodDescriptor methodDescriptor : methodDescriptors) {
-                                Method method = methodDescriptor.getMethod();
-                                Annotation[] annotations = method.getAnnotations();
-                                String mappingPath = handleMappingPrefixAndSuffix(preMapping, getPostMapping(annotations));
-                                if (!requestMappings.add(mappingPath)) {
-                                    throw new RuntimeException("caveat! There are duplicate request path definitions!");
-                                }
-                                Set<String> supportedHttpMethods = getSupportedHttpMethods(annotations);
-                                HttpServletRequestHandler requestHandler = new HttpServletRequestHandler(mappingPath, clazz, method, supportedHttpMethods);
-                                requestHandlerMap.put(mappingPath, requestHandler);
-                            }
-                        }
-                    } catch (IntrospectionException e) {
-                        servletContext.log("create HttpServletRequestHandler error!", e);
-                    }
-                    return requestHandlerMap;
-                })
+                .map(this::initRequestHandlerMap)
                 .forEach(pathHandleMapping::putAll);
+    }
+
+    private Map<String, HttpServletRequestHandler> initRequestHandlerMap(Class<?> clazz) {
+        BeanInfo beanInfo;
+        Map<String, HttpServletRequestHandler> requestHandlerMap = new LinkedHashMap<>();
+        try {
+            beanInfo = Introspector.getBeanInfo(clazz);
+            Annotation[] annotationOnClass = beanInfo != null ? beanInfo.getClass().getAnnotations() : new Annotation[0];
+            for (Annotation annotation : annotationOnClass) {
+                String preMapping = getPreMapping(annotation);
+                MethodDescriptor[] methodDescriptors = beanInfo.getMethodDescriptors();
+                for (MethodDescriptor methodDescriptor : methodDescriptors) {
+                    Method method = methodDescriptor.getMethod();
+                    Annotation[] annotations = method.getAnnotations();
+                    String mappingPath = handleMappingPrefixAndSuffix(preMapping, getPostMapping(annotations));
+                    if (!requestMappings.add(mappingPath)) {
+                        throw new RuntimeException("caveat! There are duplicate request path definitions!");
+                    }
+                    Set<String> supportedHttpMethods = getSupportedHttpMethods(annotations);
+                    ControllerHandleType handleType = clazz.getAnnotation(RestController.class) == null ? ControllerHandleType.VIEW : ControllerHandleType.VIEW;
+                    requestHandlerMap.put(mappingPath, new HttpServletRequestHandler(mappingPath, handleType, clazz.newInstance(), method, supportedHttpMethods));
+                }
+            }
+        } catch (Exception e) {
+            servletContext.log("create HttpServletRequestHandler error!", e);
+        }
+        return requestHandlerMap;
     }
 
     private String handleMappingPrefixAndSuffix(String preMapping, String postMapping) {
@@ -179,5 +182,24 @@ public class DispatcherServlet extends HttpServlet {
         String requestURI = request.getRequestURI();
         String prefixPath = request.getContextPath();
         HttpServletRequestHandler httpServletRequestHandler = pathHandleMapping.get(requestURI);
+        if (!httpServletRequestHandler.getSupportedHttpMethods().contains(request.getMethod())) {
+            throw new RuntimeException("request method is not supported！");
+        }
+        ControllerHandleType handleType = httpServletRequestHandler.getHandleType();
+        Object controller = httpServletRequestHandler.getController();
+        Method handleMethod = httpServletRequestHandler.getHandleMethod();
+        Result result;
+        switch (handleType) {
+            case REST:
+                result = restControllerHandler.handle(request, response, controller, handleMethod);
+                response.getWriter().write(JSON.toJSONString(result));
+                break;
+            case VIEW:
+                viewControllerHandler.handle(request, response, controller, handleMethod);
+                break;
+            default:
+                throw new RuntimeException("request could not be processed！");
+        }
+
     }
 }

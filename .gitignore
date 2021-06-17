@@ -1,2 +1,5 @@
 # Project exclude paths
-/ning-mvc/target/
+.idea
+my_world.iml
+target
+.gitignore

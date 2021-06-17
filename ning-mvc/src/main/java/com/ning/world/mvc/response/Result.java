@@ -1,6 +1,9 @@
 package com.ning.world.mvc.response;
 
-import javax.servlet.http.HttpServletResponse;
+import com.ning.world.mvc.enums.ResponseEnum;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * {@link com.ning.world.mvc.controller.RestController} 的返回的数据结构
@@ -8,6 +11,9 @@ import javax.servlet.http.HttpServletResponse;
  * @author <a href="guotongning@58.com">Nicholas</a>
  * @since 1.0.0
  */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Result {
     /**
      * 如果 view = true,则 message 为页面资源URI
@@ -17,44 +23,30 @@ public class Result {
     private String message;
     private Object data;
 
-    public Result(Object data) {
-        this.code = HttpServletResponse.SC_OK;
-        this.message = "success";
-        this.data = data;
+    public static Result ok() {
+        Result result = new Result();
+        result.code = ResponseEnum.OK.getCode();
+        result.message = ResponseEnum.OK.getMessage();
+        return result;
     }
 
-    public Result(int code, String message) {
-        this.code = code;
-        this.message = message;
+    public static Result ok(Object data) {
+        Result result = new Result();
+        result.code = ResponseEnum.OK.getCode();
+        result.message = ResponseEnum.OK.getMessage();
+        result.data = data;
+        return result;
     }
 
-    public Result(int code, String message, Object data) {
-        this.code = code;
-        this.message = message;
-        this.data = data;
+    public static Result view(String view) {
+        Result result = new Result();
+        result.code = ResponseEnum.OK.getCode();
+        result.message = view;
+        result.view = true;
+        return result;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public Object getData() {
-        return data;
-    }
-
-    public void setData(Object data) {
-        this.data = data;
+    public boolean isView() {
+        return view;
     }
 }
