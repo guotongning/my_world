@@ -5,6 +5,7 @@ import com.ning.world.mvc.response.Result;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
@@ -21,9 +22,8 @@ public class DefaultRestHandler implements ControllerHandler {
     }
 
     @Override
-    public Result handle(HttpServletRequest request, HttpServletResponse response, Object controller, Method handleMethod) {
-
-        return null;
+    public Result handle(HttpServletRequest request, HttpServletResponse response, Object controller, Method handleMethod) throws InvocationTargetException, IllegalAccessException {
+        return (Result) handleMethod.invoke(controller);
     }
 
 

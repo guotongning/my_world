@@ -9,9 +9,9 @@ import com.ning.world.mvc.handler.ClassScanner;
 import com.ning.world.mvc.handler.ControllerHandler;
 import com.ning.world.mvc.handler.HttpServletRequestHandler;
 import com.ning.world.mvc.response.Result;
+import org.apache.commons.lang.StringUtils;
 
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -22,10 +22,11 @@ import javax.ws.rs.Path;
 import java.beans.BeanInfo;
 import java.beans.Introspector;
 import java.beans.MethodDescriptor;
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 
@@ -68,6 +69,7 @@ public class DispatcherServlet extends HttpServlet {
                     if (this.viewControllerHandler == null) {
                         this.viewControllerHandler = controllerHandler;
                     }
+                    break;
                 default:
                     throw new RuntimeException("Must specify the type of request handled by the implementation class！@see com.ning.world.mvc.enums.ControllerHandleType");
             }
@@ -102,19 +104,22 @@ public class DispatcherServlet extends HttpServlet {
         Map<String, HttpServletRequestHandler> requestHandlerMap = new LinkedHashMap<>();
         try {
             beanInfo = Introspector.getBeanInfo(clazz);
-            Annotation[] annotationOnClass = beanInfo != null ? beanInfo.getClass().getAnnotations() : new Annotation[0];
+            Annotation[] annotationOnClass = beanInfo != null ? clazz.getAnnotations() : new Annotation[0];
             for (Annotation annotation : annotationOnClass) {
+                if (!(annotation instanceof Path) && !(annotation instanceof RequestMapping)) {
+                    continue;
+                }
                 String preMapping = getPreMapping(annotation);
-                MethodDescriptor[] methodDescriptors = beanInfo.getMethodDescriptors();
+                Collection<MethodDescriptor> methodDescriptors = getRequestHandleMethods(beanInfo);
                 for (MethodDescriptor methodDescriptor : methodDescriptors) {
                     Method method = methodDescriptor.getMethod();
                     Annotation[] annotations = method.getAnnotations();
-                    String mappingPath = handleMappingPrefixAndSuffix(preMapping, getPostMapping(annotations));
+                    String mappingPath = handleMappingPath(preMapping) + handleMappingPath(getPostMapping(annotations));
                     if (!requestMappings.add(mappingPath)) {
                         throw new RuntimeException("caveat! There are duplicate request path definitions!");
                     }
                     Set<String> supportedHttpMethods = getSupportedHttpMethods(annotations);
-                    ControllerHandleType handleType = clazz.getAnnotation(RestController.class) == null ? ControllerHandleType.VIEW : ControllerHandleType.VIEW;
+                    ControllerHandleType handleType = clazz.getAnnotation(RestController.class) == null ? ControllerHandleType.VIEW : ControllerHandleType.REST;
                     requestHandlerMap.put(mappingPath, new HttpServletRequestHandler(mappingPath, handleType, clazz.newInstance(), method, supportedHttpMethods));
                 }
             }
@@ -124,20 +129,26 @@ public class DispatcherServlet extends HttpServlet {
         return requestHandlerMap;
     }
 
-    private String handleMappingPrefixAndSuffix(String preMapping, String postMapping) {
-        if (!preMapping.startsWith("/")) {
-            preMapping = "/" + preMapping;
+    private Collection<MethodDescriptor> getRequestHandleMethods(BeanInfo beanInfo) {
+        return Arrays.stream(beanInfo.getMethodDescriptors()).filter(methodDescriptor -> {
+            Method method = methodDescriptor.getMethod();
+            int mod = method.getModifiers();
+            RequestMapping methodAnnotation = method.getAnnotation(RequestMapping.class);
+            return Modifier.isPublic(mod) && methodAnnotation != null;
+        }).collect(Collectors.toList());
+    }
+
+    private String handleMappingPath(String mappingPath) {
+        if (StringUtils.isEmpty(mappingPath)) {
+            return "";
         }
-        if (preMapping.endsWith("/")) {
-            preMapping = preMapping.substring(0, preMapping.length() - 1);
+        if (!mappingPath.startsWith("/")) {
+            mappingPath = "/" + mappingPath;
         }
-        if (!postMapping.startsWith("/")) {
-            postMapping = "/" + postMapping;
+        if (mappingPath.endsWith("/")) {
+            mappingPath = mappingPath.substring(0, mappingPath.length() - 1);
         }
-        if (postMapping.endsWith("/")) {
-            postMapping = postMapping.substring(0, postMapping.length() - 1);
-        }
-        return preMapping + postMapping;
+        return mappingPath;
     }
 
     private Set<String> getSupportedHttpMethods(Annotation[] annotations) {
@@ -156,7 +167,7 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     private String getPostMapping(Annotation[] annotations) {
-        String postMapping = null;
+        String postMapping = "";
         for (Annotation annotationOnMethod : annotations) {
             if (annotationOnMethod instanceof Path) {
                 postMapping = ((Path) annotationOnMethod).value();
@@ -168,7 +179,7 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     private String getPreMapping(Annotation annotation) {
-        String preMapping = null;
+        String preMapping = "";
         if (annotation instanceof Path) {
             preMapping = ((Path) annotation).value();
         } else if (annotation instanceof RequestMapping) {
@@ -178,9 +189,8 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     @Override
-    protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void service(HttpServletRequest request, HttpServletResponse response) {
         String requestURI = request.getRequestURI();
-        String prefixPath = request.getContextPath();
         HttpServletRequestHandler httpServletRequestHandler = pathHandleMapping.get(requestURI);
         if (!httpServletRequestHandler.getSupportedHttpMethods().contains(request.getMethod())) {
             throw new RuntimeException("request method is not supported！");
@@ -188,17 +198,20 @@ public class DispatcherServlet extends HttpServlet {
         ControllerHandleType handleType = httpServletRequestHandler.getHandleType();
         Object controller = httpServletRequestHandler.getController();
         Method handleMethod = httpServletRequestHandler.getHandleMethod();
-        Result result;
-        switch (handleType) {
-            case REST:
-                result = restControllerHandler.handle(request, response, controller, handleMethod);
-                response.getWriter().write(JSON.toJSONString(result));
-                break;
-            case VIEW:
-                viewControllerHandler.handle(request, response, controller, handleMethod);
-                break;
-            default:
-                throw new RuntimeException("request could not be processed！");
+        try {
+            switch (handleType) {
+                case REST:
+                    Result result = restControllerHandler.handle(request, response, controller, handleMethod);
+                    response.getWriter().write(JSON.toJSONString(result));
+                    break;
+                case VIEW:
+                    viewControllerHandler.handle(request, response, controller, handleMethod);
+                    break;
+                default:
+                    throw new RuntimeException("request could not be processed！");
+            }
+        } catch (Exception e) {
+            servletContext.log("service error!", e);
         }
 
     }

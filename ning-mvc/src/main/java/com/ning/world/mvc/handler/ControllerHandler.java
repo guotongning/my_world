@@ -5,6 +5,7 @@ import com.ning.world.mvc.response.Result;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
@@ -21,6 +22,6 @@ public interface ControllerHandler {
      */
     ControllerHandleType handleType();
 
-    Result handle(HttpServletRequest request, HttpServletResponse response, Object controller, Method handleMethod);
+    Result handle(HttpServletRequest request, HttpServletResponse response, Object controller, Method handleMethod) throws InvocationTargetException, IllegalAccessException;
 
 }
