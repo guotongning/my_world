@@ -2,7 +2,6 @@ package com.ning.world.theworld.controller;
 
 import com.ning.world.mvc.annotation.RequestMapping;
 import com.ning.world.mvc.annotation.RestController;
-import com.ning.world.mvc.annotation.ViewController;
 import com.ning.world.mvc.response.Result;
 
 import javax.ws.rs.POST;

@@ -1,7 +1,6 @@
 package com.ning.world.mvc.handler;
 
 
-import com.ning.world.mvc.controller.Controller;
 import com.ning.world.mvc.enums.ControllerHandleType;
 import lombok.AllArgsConstructor;
 import lombok.Data;

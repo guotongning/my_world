@@ -1,6 +1,5 @@
 package com.ning.world.mvc.handler;
 
-import java.util.List;
 import java.util.Set;
 
 /**
