@@ -14,6 +14,7 @@
         <module>ning-mvc</module>
         <module>ning-world</module>
         <module>ning-ioc</module>
+        <module>ning-lombok</module>
     </modules>
 
     <properties>

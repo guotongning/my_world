@@ -29,6 +29,11 @@
             <version>${javax.servlet-api.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.ning.world</groupId>
+            <artifactId>ning-lombok</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
 </project>
