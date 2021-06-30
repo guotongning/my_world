@@ -1,7 +1,6 @@
 package com.ning.world.lombok.translator;
 
 import com.sun.source.tree.Tree;
-import com.sun.tools.javac.api.JavacTrees;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
@@ -53,15 +52,16 @@ public class GetterTreeTranslator extends TreeTranslator {
     // 构建Getter方法定义
     private JCTree makeGetterMethodDecl(JCTree.JCVariableDecl jcVariableDecl) {
         ListBuffer<JCTree.JCStatement> statements = new ListBuffer<>();
-        statements
-                .append(treeMaker
-                        .Return(treeMaker
-                                .Select(treeMaker
-                                        .Ident(names
-                                                .fromString("this")), jcVariableDecl.getName()
-                                )
+        statements.append(
+                treeMaker.Return(
+                        treeMaker.Select(
+                                treeMaker.Ident(
+                                        names.fromString("this")
+                                ),
+                                jcVariableDecl.getName()
                         )
-                );
+                )
+        );
         JCTree.JCBlock body = treeMaker.Block(0, statements.toList());
         return treeMaker
                 .MethodDef(

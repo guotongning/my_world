@@ -60,9 +60,10 @@ public class GetterProcessor extends AbstractProcessor {
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         roundEnv
                 .getElementsAnnotatedWith(Getter.class)
-                .forEach(element -> trees
-                        .getTree(element)
-                        .accept(new GetterTreeTranslator(messager, treeMaker, names))
+                .forEach(
+                        element -> trees
+                                .getTree(element)
+                                .accept(new GetterTreeTranslator(messager, treeMaker, names))
                 );
         return true;
     }
